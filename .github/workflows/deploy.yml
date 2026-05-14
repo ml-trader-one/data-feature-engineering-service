@@ -55,6 +55,7 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         env:
           GITHUB_OWNER: ${{ github.repository_owner }}
+          INVEST_TOKEN: ${{ secrets.INVEST_TOKEN }}
         with:
           host: ${{ secrets.SERVER_IP }}
           username: ${{ secrets.SERVER_USER }}
@@ -64,6 +65,7 @@ jobs:
             cd /opt/automl
             echo "${{ secrets.CR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             export GITHUB_REPOSITORY_OWNER=$GITHUB_OWNER
-            export FEATURE_IMAGE_TAG=${{ needs.build-and-push-image.outputs.version }}
+            export INVEST_TOKEN=$INVEST_TOKEN
+            export FEATURE_IMAGE_TAG=sha-${GITHUB_SHA::7}
             docker compose pull data-feature-engineering-service
             docker compose up -d data-feature-engineering-service
