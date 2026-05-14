@@ -62,5 +62,6 @@ jobs:
           script: |
             cd /opt/automl
             export GITHUB_REPOSITORY_OWNER=$GITHUB_OWNER
-            docker-compose pull data-feature-engineering-service
-            docker-compose up -d data-feature-engineering-service
+            export FEATURE_IMAGE_TAG=${{ steps.meta.outputs.version }}
+            docker compose pull data-feature-engineering-service
+            docker compose up -d data-feature-engineering-service
