@@ -9,7 +9,27 @@ from app.features import build_latest_features
 from app.kafka_io import KafkaIO
 from app.repository import CandleRepository
 
+from prometheus_client import start_http_server, Counter, Histogram
+
 logger = structlog.get_logger(__name__)
+
+
+messages_processed = Counter(
+    'kafka_messages_processed_total',
+    'Total processed messages',
+    ['topic']
+)
+
+processing_duration = Histogram(
+    'message_processing_duration_seconds',
+    'Time spent processing a message'
+)
+
+messages_failed = Counter(
+    'kafka_messages_failed_total',
+    'Total failed messages',
+    ['topic']
+)
 
 
 class FeatureEngineeringService:
@@ -22,6 +42,7 @@ class FeatureEngineeringService:
     async def start(self):
         await self.repo.start()
         await self.kafka.start()
+        start_http_server(8000)
         logger.info("Feature service started")
 
     async def stop(self):
@@ -34,9 +55,12 @@ class FeatureEngineeringService:
 
         async for msg in self.kafka.consumer:
             try:
-                await self.process_message(msg.value)
+                with processing_duration.time():
+                    await self.process_message(msg.value)
                 await self.kafka.consumer.commit()
+                messages_processed.labels(topic=msg.topic).inc()
             except Exception as exc:
+                messages_failed.labels(topic=msg.topic).inc()
                 logger.exception("Failed to process message", error=str(exc))
 
     async def process_message(self, payload: dict):
