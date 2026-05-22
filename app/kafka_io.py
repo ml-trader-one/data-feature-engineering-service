@@ -17,7 +17,7 @@ class KafkaIO:
             bootstrap_servers=settings.kafka_bootstrap_servers,
             group_id=settings.kafka_group_id,
             enable_auto_commit=False,
-            auto_offset_reset="latest",
+            auto_offset_reset="earliest",
             value_deserializer=lambda v: json.loads(v.decode("utf-8")),
         )
         self.producer = AIOKafkaProducer(
