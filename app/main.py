@@ -7,11 +7,23 @@ import structlog
 from app.config import settings
 from app.service import FeatureEngineeringService
 
+SERVICE_LOGGER_NAME = "data_feature_engineering_service"
+
 
 def configure_logging():
+    root_logger = logging.getLogger()
+    existing_service_handlers = [
+        handler
+        for handler in root_logger.handlers
+        if getattr(handler, "_data_feature_service_handler", False)
+    ]
+    for handler in existing_service_handlers:
+        root_logger.removeHandler(handler)
+        handler.close()
+
     loki_handler = logging_loki.LokiHandler(
         url=f"{settings.loki_url}/loki/api/v1/push",
-        tags={"service": "data-feature-engineering-service"},
+        tags={"service": SERVICE_LOGGER_NAME},
         version="1",
     )
 
@@ -31,8 +43,9 @@ def configure_logging():
 
     handler = logging.StreamHandler()
     handler.setFormatter(formatter)
+    handler._data_feature_service_handler = True
 
-    root_logger = logging.getLogger()
+    loki_handler._data_feature_service_handler = True
     root_logger.addHandler(handler)
     root_logger.addHandler(loki_handler)
     root_logger.setLevel(logging.getLevelName(settings.log_level))
@@ -55,8 +68,8 @@ def configure_logging():
 async def _main():
     configure_logging()
     service = FeatureEngineeringService()
-    await service.start()
     try:
+        await service.start()
         await service.run()
     finally:
         await service.stop()
