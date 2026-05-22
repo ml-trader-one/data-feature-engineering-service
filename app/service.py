@@ -39,6 +39,11 @@ class FeatureEngineeringService:
         self.buffer = CandleBuffer(maxlen=settings.feature_window_size)
         self._recent_keys: set[str] = set()
 
+    def _remember_processed(self, dedup_key: str) -> None:
+        self._recent_keys.add(dedup_key)
+        if len(self._recent_keys) > 10000:
+            self._recent_keys.clear()
+
     async def start(self):
         await self.repo.start()
         await self.kafka.start()
@@ -73,9 +78,6 @@ class FeatureEngineeringService:
         if dedup_key in self._recent_keys:
             logger.debug("Duplicate skipped", dedup_key=dedup_key)
             return
-        self._recent_keys.add(dedup_key)
-        if len(self._recent_keys) > 10000:
-            self._recent_keys.clear()
 
         candle = CandleRow(
             instrument_uid=payload["instrument_uid"],
@@ -106,6 +108,7 @@ class FeatureEngineeringService:
 
         if candle.source != "stream":
             logger.debug("Historical candle cached only", instrument_uid=candle.instrument_uid)
+            self._remember_processed(dedup_key)
             return
 
         if self.buffer.size(key) < settings.min_candles_for_features:
@@ -115,12 +118,14 @@ class FeatureEngineeringService:
                 interval=candle.interval,
                 size=self.buffer.size(key),
             )
+            self._remember_processed(dedup_key)
             return
 
         df = self.buffer.to_dataframe(key)
         enriched = build_latest_features(df)
         if enriched is None:
             logger.debug("Latest row contains NaN, skip publish", instrument_uid=candle.instrument_uid)
+            self._remember_processed(dedup_key)
             return
 
         await self.kafka.publish_enriched(
@@ -133,6 +138,7 @@ class FeatureEngineeringService:
             interval=candle.interval,
             time=enriched["time"],
         )
+        self._remember_processed(dedup_key)
 
     @staticmethod
     def _parse_time(value: str):
