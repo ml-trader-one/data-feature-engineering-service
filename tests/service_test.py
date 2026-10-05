@@ -1,4 +1,3 @@
-from datetime import datetime
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
 
@@ -269,6 +268,7 @@ async def test_run_processes_message_and_commits(monkeypatch, service):
             async def gen():
                 for item in self._items:
                     yield item
+
             return gen()
 
     consumer = DummyConsumer([msg])
@@ -298,6 +298,7 @@ async def test_run_handles_processing_error(service):
             async def gen():
                 for item in self._items:
                     yield item
+
             return gen()
 
     consumer = DummyConsumer([msg])

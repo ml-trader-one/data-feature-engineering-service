@@ -1,5 +1,3 @@
-from datetime import datetime
-
 import asyncpg
 
 from app.cache import CandleRow

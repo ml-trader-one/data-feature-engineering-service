@@ -1,7 +1,5 @@
-import asyncio
-import logging
-
 import structlog
+from prometheus_client import Counter, Histogram, start_http_server
 
 from app.cache import CandleBuffer, CandleRow
 from app.config import settings
@@ -9,27 +7,18 @@ from app.features import build_latest_features
 from app.kafka_io import KafkaIO
 from app.repository import CandleRepository
 
-from prometheus_client import start_http_server, Counter, Histogram
-
 logger = structlog.get_logger(__name__)
 
 
 messages_processed = Counter(
-    'kafka_messages_processed_total',
-    'Total processed messages',
-    ['topic']
+    "kafka_messages_processed_total", "Total processed messages", ["topic"]
 )
 
 processing_duration = Histogram(
-    'message_processing_duration_seconds',
-    'Time spent processing a message'
+    "message_processing_duration_seconds", "Time spent processing a message"
 )
 
-messages_failed = Counter(
-    'kafka_messages_failed_total',
-    'Total failed messages',
-    ['topic']
-)
+messages_failed = Counter("kafka_messages_failed_total", "Total failed messages", ["topic"])
 
 
 class FeatureEngineeringService:
@@ -124,7 +113,9 @@ class FeatureEngineeringService:
         df = self.buffer.to_dataframe(key)
         enriched = build_latest_features(df)
         if enriched is None:
-            logger.debug("Latest row contains NaN, skip publish", instrument_uid=candle.instrument_uid)
+            logger.debug(
+                "Latest row contains NaN, skip publish", instrument_uid=candle.instrument_uid
+            )
             self._remember_processed(dedup_key)
             return
 
@@ -143,4 +134,5 @@ class FeatureEngineeringService:
     @staticmethod
     def _parse_time(value: str):
         from datetime import datetime
+
         return datetime.fromisoformat(value.replace("Z", "+00:00"))

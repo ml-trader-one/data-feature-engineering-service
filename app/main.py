@@ -1,7 +1,7 @@
 import asyncio
 import logging
-import logging_loki
 
+import logging_loki
 import structlog
 
 from app.config import settings

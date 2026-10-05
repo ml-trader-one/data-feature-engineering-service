@@ -1,7 +1,6 @@
 from collections import deque
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from datetime import datetime
-from typing import Dict, Tuple
 
 import pandas as pd
 
@@ -24,7 +23,7 @@ class CandleRow:
 class CandleBuffer:
     def __init__(self, maxlen: int = 200):
         self.maxlen = maxlen
-        self._buffers: Dict[Tuple[str, str], deque[CandleRow]] = {}
+        self._buffers: dict[tuple[str, str], deque[CandleRow]] = {}
 
     def _get_buffer(self, key: tuple[str, str]) -> deque[CandleRow]:
         if key not in self._buffers:
@@ -32,7 +31,7 @@ class CandleBuffer:
         return self._buffers[key]
 
     def seed(self, key: tuple[str, str], candles: list[CandleRow]) -> None:
-        buf = deque(candles[-self.maxlen:], maxlen=self.maxlen)
+        buf = deque(candles[-self.maxlen :], maxlen=self.maxlen)
         self._buffers[key] = buf
 
     def upsert(self, candle: CandleRow) -> None:
